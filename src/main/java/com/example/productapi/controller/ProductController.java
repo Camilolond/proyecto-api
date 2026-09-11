@@ -19,7 +19,7 @@ public class ProductController {
     }
 
     /**
-     * Answers to a GET /api/products call
+     * Responds to a GET /api/products call
      * @return Complete list of products as JSON
      */
     @GetMapping
@@ -28,9 +28,9 @@ public class ProductController {
     }
 
     /**
-     * Answers to a GET /api/products/{id} call
+     * Responds to a GET /api/products/{id} call
      * @param id ID of the product
-     * @return Specified product, 404 Not Found if the id doesnt exists
+     * @return Specified product with a 200 OK status, 404 Not Found if the id doesnt exists
      */
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
@@ -40,9 +40,9 @@ public class ProductController {
     }
 
     /**
-     * 
-     * @param product
-     * @return
+     * Responds to a POST /api/products call
+     * @param product JSON body of the object
+     * @return Created product with a 201 status
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -50,6 +50,12 @@ public class ProductController {
         return productService.createProduct(product);
     }
 
+    /**
+     * Responds to a PUT /api/products/{id}
+     * @param id ID of the product to update
+     * @param product Updated JSON body of the object
+     * @return 200 OK Status with the updated product, if the product doesnt exist returns 404 Not found instead
+     */
     @PutMapping("/{id}")
     public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
         return productService.updateProduct(id, product)
@@ -57,6 +63,11 @@ public class ProductController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /**
+     * Responds to a DELETE /api/product/{id}
+     * @param id ID of the product to delete
+     * @return 204 No content if the product got deleted, 404 Not found if the product doesnt exists
+     */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
