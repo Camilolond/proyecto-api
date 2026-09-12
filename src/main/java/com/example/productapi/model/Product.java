@@ -11,7 +11,13 @@ public class Product {
     public Product() {
     }
 
-    /* Constructor with parameters
+    /**
+     * Product constructor method
+     * @param id ID of the product, not specified by the user
+     * @param name Name of the product
+     * @param description Description of the product
+     * @param price Price of the product
+     * @param stock Stock of the product
      */
     public Product(Long id, String name, String description, Double price, Integer stock) {
         this.id = id;
