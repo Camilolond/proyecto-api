@@ -1,4 +1,5 @@
 # Proyecto-api
+A simple API REST application for managing products using a local database store in memory. The application comes with 3 products preloaded for testing
 
 # How to run
 Copy the repository to a local folder
@@ -6,6 +7,12 @@ Copy the repository to a local folder
 ```bash
 git clone https://github.com/Camilolond/proyecto-api.git
 ```
+
+Navigate to the root folder
+```bash
+cd proyecto-api
+```
+
 Run the project
 
 ```bash
