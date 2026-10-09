@@ -1,5 +1,20 @@
 # Proyecto-api
-A simple API REST application for managing products using a local database store in memory. The application comes with 3 products preloaded for testing
+A set of REST microservices built with Spring Boot, every service stores its data in memory
+
+| Service | Port | Description |
+|---|---|---|
+| `product-service` | 8080 | CRUD of products, comes with 3 products preloaded for testing. GET is public, the rest requires JWT |
+| `user-service` | 8081 | CRUD of users, passwords are stored as BCrypt hashes. Endpoints protected with JWT |
+| `auth-service` | 8082 | Registers users and issues JWTs (HS256) on login |
+
+`auth-service` talks to `user-service` through `/internal/users` endpoints that require the `X-Internal-Key` header. All the services share the `JWT_SECRET` used to sign and verify the tokens.
+
+`user-service` comes with 2 users preloaded for testing:
+
+| Username | Password | Role |
+|---|---|---|
+| `admin` | `admin123` | ADMIN |
+| `user` | `user123` | USER |
 
 # How to run
 Copy the repository to a local folder
@@ -8,47 +23,96 @@ Copy the repository to a local folder
 git clone https://github.com/Camilolond/proyecto-api.git
 ```
 
-Navigate to the root folder
-```bash
-cd proyecto-api
-```
-
-Run the project
+Navigate to the folder of the service and run it, for example
 
 ```bash
+cd proyecto-api/user-service
 mvn spring-boot:run
 ```
 
+`auth-service` needs `user-service` running to register and log in users
+
 # How to run with Docker
 
-Build the image and run the container
-
-```bash
-docker build -t proyecto-api .
-docker run -p 8080:8080 proyecto-api
-```
-
-Or use Docker Compose
+Build and start all the services with Docker Compose from the root folder
 
 ```bash
 docker compose up --build
 ```
 
-The API will be available at `http://localhost:8080/api/products`
-
-Stop the container
-
-```bash
-docker stop proyecto-api
-```
-
-Or with Docker Compose
+Stop the services
 
 ```bash
 docker compose down
 ```
 
-# API endpoints
+The secrets have development defaults, set your own before deploying
+
+```bash
+JWT_SECRET=<at-least-32-characters> INTERNAL_API_KEY=<random-key> docker compose up --build
+```
+
+# Auth endpoints
+## Bash
+
+POST register user
+```bash
+curl -X POST http://localhost:8082/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"oscar","email":"oscar@example.com","password":"secret1"}'
+```
+
+POST login, returns `{"accessToken":"...","tokenType":"Bearer","expiresIn":3600}`
+```bash
+curl -X POST http://localhost:8082/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+```
+
+GET claims of the current token
+```bash
+curl http://localhost:8082/api/auth/me -H "Authorization: Bearer $TOKEN"
+```
+
+## PowerShell (Windows)
+
+POST login and save the token
+```bash
+$body = '{"username":"admin","password":"admin123"}'
+$token = (Invoke-RestMethod -Uri "http://localhost:8082/api/auth/login" -Method POST -Body $body -ContentType "application/json").accessToken
+$headers = @{ Authorization = "Bearer $token" }
+```
+
+# User endpoints
+Every endpoint requires the `Authorization: Bearer <token>` header
+
+| Method | Endpoint | Access |
+|---|---|---|
+| GET | `/api/users` | ADMIN |
+| GET | `/api/users/me` | Any authenticated user |
+| GET | `/api/users/{id}` | Owner or ADMIN |
+| PUT | `/api/users/{id}` | Owner or ADMIN, body `{"email":"...","password":"..."}` (both optional) |
+| DELETE | `/api/users/{id}` | ADMIN |
+
+## Bash
+```bash
+curl http://localhost:8081/api/users -H "Authorization: Bearer $TOKEN"
+curl http://localhost:8081/api/users/me -H "Authorization: Bearer $TOKEN"
+curl -X PUT http://localhost:8081/api/users/2 \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"email":"new@example.com"}'
+curl -X DELETE http://localhost:8081/api/users/2 -H "Authorization: Bearer $TOKEN"
+```
+
+## PowerShell (Windows)
+```bash
+Invoke-RestMethod -Uri "http://localhost:8081/api/users" -Headers $headers
+Invoke-RestMethod -Uri "http://localhost:8081/api/users/me" -Headers $headers
+```
+
+# Product endpoints
+GET endpoints are public, POST, PUT and DELETE require the `Authorization: Bearer <token>` header (see Auth endpoints to get a token)
+
 ## PowerShell (Windows)
 
 GET all products
@@ -67,7 +131,7 @@ $body = '{"name":"Monitor","description":"1440p 240hz Monitor","price":399.99,"s
 ```
 
 ```bash
-Invoke-RestMethod -Uri "http://localhost:8080/api/products" -Method POST -Body $body -ContentType "application/json"
+Invoke-RestMethod -Uri "http://localhost:8080/api/products" -Method POST -Headers $headers -Body $body -ContentType "application/json"
 ```
 
 PUT update product
@@ -76,12 +140,12 @@ $body = '{"name":"Gaming Laptop","description":"High-performance gaming laptop",
 ```
 
 ```bash
-Invoke-RestMethod -Uri "http://localhost:8080/api/products/1" -Method PUT -Body $body -ContentType "application/json"
+Invoke-RestMethod -Uri "http://localhost:8080/api/products/1" -Method PUT -Headers $headers -Body $body -ContentType "application/json"
 ```
 
 DELETE product by ID
 ```bash
-Invoke-RestMethod -Uri "http://localhost:8080/api/products/2" -Method DELETE
+Invoke-RestMethod -Uri "http://localhost:8080/api/products/2" -Method DELETE -Headers $headers
 ```
 
 ## Bash
@@ -98,6 +162,7 @@ curl http://localhost:8080/api/products/1
 POST create product
 ```bash
 curl -X POST http://localhost:8080/api/products \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Monitor","description":"1440p 240hz Monitor","price":399.99,"stock":15}'
 ```
@@ -105,11 +170,12 @@ curl -X POST http://localhost:8080/api/products \
 PUT update product
 ```bash
 curl -X PUT http://localhost:8080/api/products/1 \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Gaming Laptop","description":"High-performance gaming laptop","price":1500.00,"stock":5}'
 ```
 
 DELETE product by ID
 ```bash
-curl -X DELETE http://localhost:8080/api/products/2
+curl -X DELETE http://localhost:8080/api/products/2 -H "Authorization: Bearer $TOKEN"
 ```
