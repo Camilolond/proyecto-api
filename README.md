@@ -1,15 +1,18 @@
 # Proyecto-api
-A set of REST microservices built with Spring Boot, every service stores its data in memory
+A set of REST microservices built with Spring Boot that store their data in PostgreSQL
 
 | Service | Port | Description |
 |---|---|---|
+| `postgres` | 5432 | PostgreSQL 17, holds one database per service: `products_db` and `users_db` |
 | `product-service` | 8080 | CRUD of products, comes with 3 products preloaded for testing. GET is public, the rest requires JWT |
 | `user-service` | 8081 | CRUD of users, passwords are stored as BCrypt hashes. Endpoints protected with JWT |
 | `auth-service` | 8082 | Registers users and issues JWTs (HS256) on login |
 
 `auth-service` talks to `user-service` through `/internal/users` endpoints that require the `X-Internal-Key` header. All the services share the `JWT_SECRET` used to sign and verify the tokens.
 
-`user-service` comes with 2 users preloaded for testing:
+The tables are created automatically by Hibernate on startup. The databases are created by [database/init.sql](database/init.sql) the first time the PostgreSQL container starts.
+
+The example data is only loaded when the tables are empty. `user-service` comes with 2 users preloaded for testing:
 
 | Username | Password | Role |
 |---|---|---|
@@ -23,10 +26,17 @@ Copy the repository to a local folder
 git clone https://github.com/Camilolond/proyecto-api.git
 ```
 
+`product-service` and `user-service` need PostgreSQL running on `localhost:5432` (user `postgres`, password `postgres`) with the `products_db` and `users_db` databases. The easiest way is to start only the database with Docker
+
+```bash
+cd proyecto-api
+docker compose up -d postgres
+```
+
 Navigate to the folder of the service and run it, for example
 
 ```bash
-cd proyecto-api/user-service
+cd user-service
 mvn spring-boot:run
 ```
 
@@ -40,16 +50,22 @@ Build and start all the services with Docker Compose from the root folder
 docker compose up --build
 ```
 
-Stop the services
+Stop the services, the data is kept in the `postgres-data` volume
 
 ```bash
 docker compose down
 ```
 
-The secrets have development defaults, set your own before deploying
+Stop the services and delete all the data
 
 ```bash
-JWT_SECRET=<at-least-32-characters> INTERNAL_API_KEY=<random-key> docker compose up --build
+docker compose down -v
+```
+
+The secrets and the database credentials have development defaults, set your own before deploying
+
+```bash
+JWT_SECRET=<at-least-32-characters> INTERNAL_API_KEY=<random-key> DB_USERNAME=<user> DB_PASSWORD=<password> docker compose up --build
 ```
 
 # Auth endpoints
