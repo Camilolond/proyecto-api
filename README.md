@@ -19,6 +19,35 @@ Run the project
 mvn spring-boot:run
 ```
 
+# How to run with Docker
+
+Build the image and run the container
+
+```bash
+docker build -t proyecto-api .
+docker run -p 8080:8080 proyecto-api
+```
+
+Or use Docker Compose
+
+```bash
+docker compose up --build
+```
+
+The API will be available at `http://localhost:8080/api/products`
+
+Stop the container
+
+```bash
+docker stop proyecto-api
+```
+
+Or with Docker Compose
+
+```bash
+docker compose down
+```
+
 # API endpoints
 ## PowerShell (Windows)
 
