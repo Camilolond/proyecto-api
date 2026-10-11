@@ -1,5 +1,5 @@
 # Proyecto-api
-A set of REST microservices built with Spring Boot that store their data in PostgreSQL
+Simple web API application with microservices for products and users that are stored in PostgreSQL, the app uses JWT for user authentication.
 
 | Service | Port | Description |
 |---|---|---|
@@ -50,19 +50,19 @@ Build and start all the services with Docker Compose from the root folder
 docker compose up --build
 ```
 
-Stop the services, the data is kept in the `postgres-data` volume
+To stop the services, the data is kept in the `postgres-data` volume
 
 ```bash
 docker compose down
 ```
 
-Stop the services and delete all the data
+To stop the services and delete all the data
 
 ```bash
 docker compose down -v
 ```
 
-The secrets and the database credentials have development defaults, set your own before deploying
+The project currently uses development defaults for the secrets and database credentials, however it is recommended to set your own when deploying the app in a real enviroment using the following command:
 
 ```bash
 JWT_SECRET=<at-least-32-characters> INTERNAL_API_KEY=<random-key> DB_USERNAME=<user> DB_PASSWORD=<password> docker compose up --build
