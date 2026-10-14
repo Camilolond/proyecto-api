@@ -91,12 +91,17 @@ curl http://localhost:8082/api/auth/me -H "Authorization: Bearer $TOKEN"
 ```
 
 ## PowerShell (Windows)
-
-POST login and save the token
+POST login and save the token, then returns the login response json
 ```bash
-$body = '{"username":"admin","password":"admin123"}'
-$token = (Invoke-RestMethod -Uri "http://localhost:8082/api/auth/login" -Method POST -Body $body -ContentType "application/json").accessToken
-$headers = @{ Authorization = "Bearer $token" }
+  $body = '{"username":"admin","password":"admin123"}'
+  $loginResponse = Invoke-RestMethod `
+    -Uri "http://localhost:8082/api/auth/login" `
+    -Method POST `
+    -Body $body `
+    -ContentType "application/json"
+  $token = $loginResponse.accessToken
+  $headers = @{ Authorization = "Bearer $token" }
+  $loginResponse | ConvertTo-Json -Depth 10
 ```
 
 # User endpoints
