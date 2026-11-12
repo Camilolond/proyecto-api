@@ -3,7 +3,7 @@ package com.example.authservice.service;
 import com.example.authservice.dto.TokenResponse;
 import com.example.authservice.dto.UserDto;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -25,7 +25,7 @@ public class JwtService {
     }
 
     /**
-     * Creates a JWT signed with HS256 whose subject is the username, it also carries the userId and roles claims
+     * Creates a JWT signed with RS256 (RSA private key) whose subject is the username, it also carries the userId and roles claims
      * that the other services use for authorization
      * @param user Authenticated user
      * @return The token and its lifetime
@@ -40,7 +40,7 @@ public class JwtService {
                 .claim("userId", user.id())
                 .claim("roles", List.of(user.role()))
                 .build();
-        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+        JwsHeader header = JwsHeader.with(SignatureAlgorithm.RS256).build();
         String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
         return new TokenResponse(token, "Bearer", expirationSeconds);
     }

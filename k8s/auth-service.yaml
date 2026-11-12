@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: proyecto-api/auth-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          env:
+            - name: USER_SERVICE_URL
+              value: http://user-service:8081
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: INTERNAL_API_KEY
+            - name: JWT_PRIVATE_KEY_PATH
+              value: /keys/private.pem
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 512Mi
+          readinessProbe:
+            tcpSocket:
+              port: 8082
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          volumeMounts:
+            - name: jwt-private-key
+              mountPath: /keys
+              readOnly: true
+      volumes:
+        # RSA private key created with kubectl (see README). If it doesnt exist the service
+        # generates a temporary key, and the tokens stop working when the pod restarts
+        - name: jwt-private-key
+          secret:
+            secretName: jwt-private-key
+            optional: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  type: NodePort
+  selector:
+    app: auth-service
+  ports:
+    - port: 8082
+      targetPort: 8082
+      nodePort: 30082

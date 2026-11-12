@@ -1,0 +1,11 @@
+# Deploy everything with: kubectl apply -k k8s/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: proyecto-api
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - postgres.yaml
+  - user-service.yaml
+  - auth-service.yaml
+  - product-service.yaml

@@ -6,9 +6,24 @@ Simple web API application with microservices for products and users that are st
 | `postgres` | 5432 | PostgreSQL 17, holds one database per service: `products_db` and `users_db` |
 | `product-service` | 8080 | CRUD of products, comes with 3 products preloaded for testing. GET is public, the rest requires JWT |
 | `user-service` | 8081 | CRUD of users, passwords are stored as BCrypt hashes. Endpoints protected with JWT |
-| `auth-service` | 8082 | Registers users and issues JWTs (HS256) on login |
+| `auth-service` | 8082 | Registers users and issues JWTs signed with RSA (RS256) on login |
 
-`auth-service` talks to `user-service` through `/internal/users` endpoints that require the `X-Internal-Key` header. All the services share the `JWT_SECRET` used to sign and verify the tokens.
+`auth-service` talks to `user-service` through `/internal/users` endpoints that require the `X-Internal-Key` header.
+
+# Security
+The tokens are JWTs signed with **RS256** (RSA + SHA-256), following the OAuth 2.0 Bearer Token standard:
+
+- `auth-service` signs the tokens with an RSA **private key** that only it knows
+- `auth-service` publishes the matching **public key** at `GET /.well-known/jwks.json` (JWK Set format)
+- `product-service` and `user-service` download the public key from that URL and use it to verify the signature, they can verify tokens but can't create them
+
+The private key is read from the PEM file set in `JWT_PRIVATE_KEY_PATH`. If no file is set, `auth-service` generates a temporary key on startup, which is fine for local development but every restart invalidates the issued tokens. Generate a key with
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out private.pem
+```
+
+`*.pem` files are ignored by git, never commit the private key.
 
 The tables are created automatically by Hibernate on startup. The databases are created by [database/init.sql](database/init.sql) the first time the PostgreSQL container starts.
 
@@ -65,7 +80,63 @@ docker compose down -v
 The project currently uses development defaults for the secrets and database credentials, however it is recommended to set your own when deploying the app in a real enviroment using the following command:
 
 ```bash
-JWT_SECRET=<at-least-32-characters> INTERNAL_API_KEY=<random-key> DB_USERNAME=<user> DB_PASSWORD=<password> docker compose up --build
+INTERNAL_API_KEY=<random-key> DB_USERNAME=<user> DB_PASSWORD=<password> docker compose up --build
+```
+
+# How to run with Kubernetes
+
+The manifests are in the [k8s/](k8s/) folder, one file per service, all inside the `proyecto-api` namespace:
+
+| File | Content |
+|---|---|
+| `namespace.yaml` | `proyecto-api` namespace |
+| `secrets.yaml` | Database credentials and `INTERNAL_API_KEY` (development values) |
+| `postgres.yaml` | PostgreSQL with a 1Gi persistent volume and the script that creates the databases |
+| `user-service.yaml`, `auth-service.yaml`, `product-service.yaml` | Deployment + Service of each microservice |
+| `kustomization.yaml` | Lists the files so everything is applied with one command |
+
+You need a local cluster, for example the one included in Docker Desktop (Settings > Kubernetes > Enable Kubernetes).
+
+1. Build the images, Docker Desktop's cluster uses the local images directly
+
+```bash
+docker compose build
+```
+
+2. Deploy everything
+
+```bash
+kubectl apply -k k8s/
+```
+
+3. Create the RSA private key used to sign the JWTs and restart `auth-service` so it loads it
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out private.pem
+kubectl create secret generic jwt-private-key -n proyecto-api --from-file=private.pem=private.pem
+kubectl rollout restart deployment/auth-service -n proyecto-api
+```
+
+4. Check that all the pods are `Running` and `READY 1/1` (it takes around a minute)
+
+```bash
+kubectl get pods -n proyecto-api
+```
+
+The services are exposed with NodePort:
+
+| Service | URL |
+|---|---|
+| `product-service` | `http://localhost:30080/api/products` |
+| `user-service` | `http://localhost:30081/api/users` |
+| `auth-service` | `http://localhost:30082/api/auth` |
+
+If your cluster doesn't expose NodePorts on `localhost` (minikube, kind), use port forwarding instead, for example `kubectl port-forward -n proyecto-api service/auth-service 8082:8082`
+
+Delete everything, including the database data and the RSA key (deleting the namespace deletes everything inside it)
+
+```bash
+kubectl delete -k k8s/
 ```
 
 # Auth endpoints

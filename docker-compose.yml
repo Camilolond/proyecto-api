@@ -18,11 +18,12 @@ services:
 
   product-service:
     build: ./product-service
+    image: proyecto-api/product-service:1.0.0
     ports:
       - "8080:8080"
     container_name: product-service
     environment:
-      JWT_SECRET: ${JWT_SECRET:-change-this-secret-key-at-least-32-characters-long}
+      JWK_SET_URI: http://auth-service:8082/.well-known/jwks.json
       DB_URL: jdbc:postgresql://postgres:5432/products_db
       DB_USERNAME: ${DB_USERNAME:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
@@ -32,11 +33,12 @@ services:
 
   user-service:
     build: ./user-service
+    image: proyecto-api/user-service:1.0.0
     ports:
       - "8081:8081"
     container_name: user-service
     environment:
-      JWT_SECRET: ${JWT_SECRET:-change-this-secret-key-at-least-32-characters-long}
+      JWK_SET_URI: http://auth-service:8082/.well-known/jwks.json
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-change-this-internal-key}
       DB_URL: jdbc:postgresql://postgres:5432/users_db
       DB_USERNAME: ${DB_USERNAME:-postgres}
@@ -47,11 +49,11 @@ services:
 
   auth-service:
     build: ./auth-service
+    image: proyecto-api/auth-service:1.0.0
     ports:
       - "8082:8082"
     container_name: auth-service
     environment:
-      JWT_SECRET: ${JWT_SECRET:-change-this-secret-key-at-least-32-characters-long}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-change-this-internal-key}
       USER_SERVICE_URL: http://user-service:8081
     depends_on:
