@@ -271,3 +271,6 @@ DELETE product by ID
 ```bash
 curl -X DELETE http://localhost:8080/api/products/2 -H "Authorization: Bearer $TOKEN"
 ```
+
+## Test
+Test text
